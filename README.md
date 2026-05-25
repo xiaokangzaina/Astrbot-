@@ -7,7 +7,7 @@
 ![License](https://img.shields.io/badge/License-AGPLv3-blue)
 ![Python](https://img.shields.io/badge/Python-3.10%2B-green)
 ![AstrBot](https://img.shields.io/badge/AstrBot-Plugin-purple)
-![Version](https://img.shields.io/badge/Version-v1.5.4-orange)
+![Version](https://img.shields.io/badge/Version-v1.5.5-orange)
 ![Author](https://img.shields.io/badge/Author-local-lightgrey)
 
 ---
@@ -134,6 +134,8 @@
 ---
 
 ## 更新记录
+
+v1.5.5：更换插件头像 logo，并同步更新 README 顶部展示图片。
 
 v1.5.4：仓库更名为 Permission-Controller，并更新文档图片链接与插件仓库地址。
 
