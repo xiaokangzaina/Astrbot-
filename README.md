@@ -7,7 +7,7 @@
 ![License](https://img.shields.io/badge/License-AGPLv3-blue)
 ![Python](https://img.shields.io/badge/Python-3.10%2B-green)
 ![AstrBot](https://img.shields.io/badge/AstrBot-Plugin-purple)
-![Version](https://img.shields.io/badge/Version-v1.6.1-orange)
+![Version](https://img.shields.io/badge/Version-v1.6.2-orange)
 ![Author](https://img.shields.io/badge/Author-local-lightgrey)
 
 ---
@@ -134,6 +134,8 @@
 ---
 
 ## 更新记录
+
+v1.6.2：屏蔽 AstrBot 后台 `Prepare to send - 用户/QQ` 冗余发送前日志。
 
 v1.6.1：修复群聊权限规则不严格的问题。规则开启后，未命中放行群或 用户QQ-群号 组合的群聊消息会被拦截。
 

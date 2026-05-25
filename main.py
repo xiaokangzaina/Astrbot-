@@ -10,23 +10,27 @@ from astrbot.api.star import Context, Star, register
 
 
 class _AstrBotStopPropagationLogFilter(logging.Filter):
-    """屏蔽 AstrBot 框架输出的指定“终止事件传播”调试日志。"""
+    """屏蔽 AstrBot 框架输出的指定冗余日志。"""
 
-    TARGET_TEXT = "astrbot - after_message_sent 终止了事件传播。"
+    TARGET_TEXTS = (
+        "astrbot - after_message_sent 终止了事件传播。",
+        "Prepare to send -",
+    )
 
     def filter(self, record: logging.LogRecord) -> bool:
         try:
             msg = record.getMessage()
         except Exception:
             return True
-        return self.TARGET_TEXT not in str(msg)
+        text = str(msg)
+        return not any(target in text for target in self.TARGET_TEXTS)
 
 
 @register(
     "astrbot_plugin_permission_controller",
     "local",
     "按 用户QQ-群号/群号列表 限制谁能调用模型/机器人",
-    "1.6.1",
+    "1.6.2",
 )
 class GroupUserWhitelistPlugin(Star):
     """群内用户级白名单。"""
@@ -59,7 +63,7 @@ class GroupUserWhitelistPlugin(Star):
 
     @classmethod
     def _install_stop_propagation_log_filter(cls):
-        """安装日志过滤器，屏蔽：astrbot - after_message_sent 终止了事件传播。"""
+        """安装日志过滤器，屏蔽指定 AstrBot 冗余日志。"""
         if cls._log_filter_installed:
             return
         target_loggers = [
@@ -70,6 +74,7 @@ class GroupUserWhitelistPlugin(Star):
             logging.getLogger("astrbot.core"),
             logging.getLogger("astrbot.core.pipeline.context_utils"),
             logging.getLogger("astrbot.core.pipeline.result_decorate.stage"),
+            logging.getLogger("astrbot.core.pipeline.respond.stage"),
         ]
         for lg in target_loggers:
             try:
