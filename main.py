@@ -23,10 +23,10 @@ class _AstrBotStopPropagationLogFilter(logging.Filter):
 
 
 @register(
-    "astrbot_plugin_group_user_whitelist",
+    "astrbot_plugin_permission_controller",
     "local",
     "按 用户QQ-群号/群号列表 限制谁能调用模型/机器人",
-    "1.5.0",
+    "1.6.1",
 )
 class GroupUserWhitelistPlugin(Star):
     """群内用户级白名单。"""
@@ -270,16 +270,20 @@ class GroupUserWhitelistPlugin(Star):
         if not self.enable_group_rules:
             return
 
+        # 严格群聊权限：群聊规则开启后，只有两种情况放行：
+        # 1. 群号在“放行权限 QQ 群聊列表”中，整个群放行；
+        # 2. 命中“放行权限 QQ 列表”的 用户QQ-群号 组合。
+        # 未配置的群、未配置的用户一律拦截，避免“未填写群号仍可调用”。
+        if self.admin_bypass and self._is_admin(sender_id):
+            return
+
         if group_id in self.allowed_groups:
             return
 
-        allowed_users = self.rules.get(group_id)
-        if not allowed_users:
+        allowed_users = self.rules.get(group_id, set())
+        if sender_id and sender_id in allowed_users:
             return
-        if self.admin_bypass and self._is_admin(sender_id):
-            return
-        if sender_id in allowed_users:
-            return
+
         event.stop_event()
 
     @filter.event_message_type(filter.EventMessageType.ALL, priority=maxsize)

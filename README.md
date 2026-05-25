@@ -7,7 +7,7 @@
 ![License](https://img.shields.io/badge/License-AGPLv3-blue)
 ![Python](https://img.shields.io/badge/Python-3.10%2B-green)
 ![AstrBot](https://img.shields.io/badge/AstrBot-Plugin-purple)
-![Version](https://img.shields.io/badge/Version-v1.6.0-orange)
+![Version](https://img.shields.io/badge/Version-v1.6.1-orange)
 ![Author](https://img.shields.io/badge/Author-local-lightgrey)
 
 ---
@@ -41,9 +41,9 @@
 
 私聊白名单只影响好友私聊。写在这里的 QQ 可以私聊机器人，但不会变成管理员。
 
-放行权限 QQ 列表用于精确控制某个 QQ 在某个群里的调用权限。适合只允许指定用户在指定群调用机器人的场景。
+放行权限 QQ 列表用于精确控制某个 QQ 在某个群里的调用权限。适合只允许指定用户在指定群调用机器人的场景。群聊调用权限规则开启后，未命中该列表且所在群也不在群聊整体放行列表中的用户会被拦截。
 
-放行权限 QQ 群聊列表用于整体放行某些群。只要群号在这里，整个群都可以通过本插件的群聊权限检查。
+放行权限 QQ 群聊列表用于整体放行某些群。只有群号在这里时，整个群才可以通过本插件的群聊权限检查；没有填写的群不会整体放行。
 
 群聊禁止调用黑名单用于禁止某些 QQ 在任何群聊中调用机器人。这里填写的是用户 QQ，不是群号。
 
@@ -134,6 +134,8 @@
 ---
 
 ## 更新记录
+
+v1.6.1：修复群聊权限规则不严格的问题。规则开启后，未命中放行群或 用户QQ-群号 组合的群聊消息会被拦截。
 
 v1.6.0：仓库和插件市场名称更改为 astrbot_plugin_permission_controller，适配 AstrBot 插件市场命名规范。
 
