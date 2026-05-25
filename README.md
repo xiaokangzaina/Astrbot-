@@ -7,7 +7,7 @@
 ![License](https://img.shields.io/badge/License-AGPLv3-blue)
 ![Python](https://img.shields.io/badge/Python-3.10%2B-green)
 ![AstrBot](https://img.shields.io/badge/AstrBot-Plugin-purple)
-![Version](https://img.shields.io/badge/Version-v1.6.2-orange)
+![Version](https://img.shields.io/badge/Version-v1.7.0-orange)
 ![Author](https://img.shields.io/badge/Author-local-lightgrey)
 
 ---
@@ -54,6 +54,7 @@
 | 页面显示名 | 用途 |
 | :--- | :--- |
 | 管理员绕过限制 | 开启后，AstrBot 平台管理员不会被本插件拦截。 |
+| 管理员绕过唤醒词 | 开启后，AstrBot 平台管理员无需唤醒词或 @ 机器人，也能用普通消息唤醒机器人。 |
 | 私聊白名单用户 | 填写允许私聊机器人普通用户的 QQ。不会授予管理员权限。 |
 | 启用群聊调用权限规则 | 控制群聊放行规则是否生效。 |
 | 放行权限 QQ 列表 | 按用户 QQ 和群号的组合，精确放行某个用户在某个群调用。 |
@@ -134,6 +135,8 @@
 ---
 
 ## 更新记录
+
+v1.7.0：新增“管理员绕过唤醒词”开关，可让平台管理员无需唤醒词或 @ 机器人即可唤醒。
 
 v1.6.2：屏蔽 AstrBot 后台 `Prepare to send - 用户/QQ` 冗余发送前日志。
 

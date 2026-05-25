@@ -5,6 +5,12 @@
     "type": "bool",
     "default": true
   },
+  "admin_wake_bypass": {
+    "description": "管理员绕过唤醒词",
+    "hint": "开启后，AstrBot 平台配置 admins_id 中的管理员在群聊/私聊发送普通消息也会唤醒机器人，无需使用唤醒词或 @ 机器人。",
+    "type": "bool",
+    "default": false
+  },
   "private_chat_users": {
     "description": "私聊白名单用户",
     "hint": "填写 QQ 号。列表中的用户可以在私聊中使用机器人；管理员自动放行。",

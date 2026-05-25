@@ -30,13 +30,14 @@ class _AstrBotStopPropagationLogFilter(logging.Filter):
     "astrbot_plugin_permission_controller",
     "local",
     "按 用户QQ-群号/群号列表 限制谁能调用模型/机器人",
-    "1.6.2",
+    "1.7.0",
 )
 class GroupUserWhitelistPlugin(Star):
     """群内用户级白名单。"""
 
     _log_filter_installed = False
     _log_filter = _AstrBotStopPropagationLogFilter()
+    _admin_wake_bypass_patch_installed = False
 
     def __init__(self, context: Context, config=None):
         super().__init__(context)
@@ -44,6 +45,7 @@ class GroupUserWhitelistPlugin(Star):
         self.config = config or {}
         self.rules = self._load_rules()
         self.admin_bypass = self._get_bool_config("admin_bypass", True)
+        self.admin_wake_bypass = self._get_bool_config("admin_wake_bypass", False)
         self.enable_group_rules = self._get_bool_config("enable_group_rules", True)
         self.enable_group_blacklist = self._get_bool_config(
             "enable_group_blacklist", True
@@ -60,6 +62,8 @@ class GroupUserWhitelistPlugin(Star):
         )
         self._sync_allowed_groups_to_platform_whitelist()
         self._install_stop_propagation_log_filter()
+        if self.admin_wake_bypass:
+            self._install_admin_wake_bypass_patch()
 
     @classmethod
     def _install_stop_propagation_log_filter(cls):
@@ -111,6 +115,61 @@ class GroupUserWhitelistPlugin(Star):
                 "1", "true", "yes", "on", "开启", "开", "启用"
             )
         return bool(value)
+
+    @classmethod
+    def _install_admin_wake_bypass_patch(cls):
+        """让 AstrBot 管理员绕过唤醒词。
+
+        AstrBot 的唤醒词检查发生在普通插件 handler 之前，因此这里对
+        WakingCheckStage.process 做最小猴补丁：管理员消息进入唤醒检查前，
+        临时追加一个内部唤醒前缀并把消息加上该前缀，让原生唤醒流程继续执行。
+        这样不改变原方法的协程类型，也保留插件 handler 过滤、权限过滤等原逻辑。
+        """
+        if cls._admin_wake_bypass_patch_installed:
+            return
+        try:
+            from astrbot.core.pipeline.waking_check.stage import WakingCheckStage
+        except Exception as exc:
+            logger.debug(f"安装管理员绕过唤醒词补丁失败: {exc}")
+            return
+
+        original_process = WakingCheckStage.process
+        internal_prefix = "__admin_wake_bypass__ "
+
+        async def patched_process(self, event):
+            added_prefix = False
+            original_message_str = None
+            try:
+                admins = {
+                    str(x).strip()
+                    for x in self.ctx.astrbot_config.get("admins_id", [])
+                    if str(x).strip()
+                }
+                sender_id = str(event.get_sender_id() or "").strip()
+                if sender_id and sender_id in admins:
+                    event.role = "admin"
+                    wake_prefixes = self.ctx.astrbot_config.setdefault("wake_prefix", [])
+                    if internal_prefix not in wake_prefixes:
+                        wake_prefixes.append(internal_prefix)
+                    if not str(event.message_str or "").startswith(internal_prefix):
+                        original_message_str = event.message_str
+                        event.message_str = internal_prefix + str(event.message_str or "")
+                        added_prefix = True
+            except Exception as exc:
+                logger.debug(f"管理员绕过唤醒词处理失败，回退默认唤醒检查: {exc}")
+
+            await original_process(self, event)
+
+            if added_prefix:
+                try:
+                    event.message_str = original_message_str or event.message_str
+                    if hasattr(event, "message_obj"):
+                        event.message_obj.message_str = event.message_str
+                except Exception:
+                    pass
+
+        WakingCheckStage.process = patched_process
+        cls._admin_wake_bypass_patch_installed = True
 
     @staticmethod
     def _normalize_ids(value):
