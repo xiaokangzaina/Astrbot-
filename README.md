@@ -1,13 +1,13 @@
-![单独配置用户调用权限列表](https://raw.githubusercontent.com/xiaokangzaina/Permission-Controller/main/plugin-avatar-v1.5.6.png)
+![权限控制器](https://raw.githubusercontent.com/xiaokangzaina/astrbot_plugin_permission_controller/main/plugin-avatar-v1.6.0.png)
 
-# 单独配置用户调用权限列表
+# 权限控制器
 
 ✨ 一个用于 AstrBot 的群聊与私聊权限管理插件 ✨
 
 ![License](https://img.shields.io/badge/License-AGPLv3-blue)
 ![Python](https://img.shields.io/badge/Python-3.10%2B-green)
 ![AstrBot](https://img.shields.io/badge/AstrBot-Plugin-purple)
-![Version](https://img.shields.io/badge/Version-v1.5.6-orange)
+![Version](https://img.shields.io/badge/Version-v1.6.0-orange)
 ![Author](https://img.shields.io/badge/Author-local-lightgrey)
 
 ---
@@ -135,11 +135,13 @@
 
 ## 更新记录
 
+v1.6.0：仓库和插件市场名称更改为 astrbot_plugin_permission_controller，适配 AstrBot 插件市场命名规范。
+
 v1.5.6：README 顶部图片改用新文件名，绕开 GitHub 图片缓存；插件头像仍使用最新 logo。
 
 v1.5.5：更换插件头像 logo，并同步更新 README 顶部展示图片。
 
-v1.5.4：仓库更名为 Permission-Controller，并更新文档图片链接与插件仓库地址。
+v1.5.4：仓库更名为 astrbot_plugin_permission_controller，并更新文档图片链接与插件仓库地址。
 
 v1.5.3：优化 README 顶部展示方式，改为直接显示项目图片、徽章和项目介绍区。
 
