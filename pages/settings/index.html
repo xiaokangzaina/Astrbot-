@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>权限控制器设置</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <main class="app">
+    <header class="hero">
+      <div>
+        <p class="eyebrow">AstrBot Plugin</p>
+        <h1>权限控制器</h1>
+        <p class="subtitle">管理私聊白名单、群聊放行、用户-群规则和黑名单。</p>
+      </div>
+      <button id="reloadBtn" class="ghost">刷新</button>
+    </header>
+    <section id="status" class="status">正在加载...</section>
+    <form id="settingsForm" class="panel"></form>
+    <footer class="actions">
+      <button id="saveBtn" class="primary" type="button">保存配置</button>
+    </footer>
+  </main>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
