@@ -17,11 +17,29 @@ from astrbot.core.platform.message_type import MessageType
 logger = logging.getLogger(__name__)
 
 
+class _AstrBotStopPropagationLogFilter(logging.Filter):
+    """屏蔽 AstrBot 框架输出的指定冗余日志。"""
+
+    TARGET_TEXTS = (
+        "astrbot - after_message_sent 终止了事件传播。",
+        "Prepare to send -",
+    )
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        """返回 False 时丢弃命中的冗余日志记录。"""
+        try:
+            msg = record.getMessage()
+        except Exception:
+            return True
+        text = str(msg)
+        return not any(target in text for target in self.TARGET_TEXTS)
+
+
 @register(
     "astrbot_plugin_permission_controller",
     "local",
     "按 用户QQ-群号/群号列表 限制谁能调用模型/机器人",
-    "1.8.0",
+    "1.7.8",
 )
 class GroupUserWhitelistPlugin(Star):
     """AstrBot 权限控制器主类。
@@ -32,6 +50,8 @@ class GroupUserWhitelistPlugin(Star):
     3. allowed_groups 会同步到 AstrBot 平台白名单，避免核心层提前拦截群消息。
     """
 
+    _log_filter_installed = False
+    _log_filter = _AstrBotStopPropagationLogFilter()
     _admin_wake_bypass_patch_installed = False
     _whitelist_stage_patch_installed = False
 
@@ -54,59 +74,50 @@ class GroupUserWhitelistPlugin(Star):
         )
         self.allowed_groups = self._normalize_ids(self._cfg_get("allowed_groups", []))
         self._sync_plugin_allowlist_to_platform_whitelist()
+        self._install_stop_propagation_log_filter()
         self._install_admin_wake_bypass_patch()
         self._install_private_whitelist_stage_patch()
 
-    _PRIVATE_CONFIG_KEYS = {"private_chat_users", "admin_bypass", "admin_wake_bypass"}
-    _GROUP_CONFIG_KEYS = {
-        "enable_group_rules",
-        "simple_rules",
-        "allowed_groups",
-        "enable_group_blacklist",
-        "group_blacklist",
-    }
-
-    def _cfg_get(self, key, default=None):
-        """安全读取配置，兼容旧版平铺配置和新版分组配置。"""
+    @classmethod
+    def _install_stop_propagation_log_filter(cls):
+        """安装日志过滤器，屏蔽指定 AstrBot 冗余日志。"""
+        if cls._log_filter_installed:
+            return
+        target_loggers = [
+            logging.getLogger(),
+            logging.getLogger("astrbot"),
+            logging.getLogger("Core"),
+            logging.getLogger("core"),
+            logging.getLogger("astrbot.core"),
+            logging.getLogger("astrbot.core.pipeline.context_utils"),
+            logging.getLogger("astrbot.core.pipeline.result_decorate.stage"),
+            logging.getLogger("astrbot.core.pipeline.respond.stage"),
+        ]
+        for lg in target_loggers:
+            try:
+                lg.addFilter(cls._log_filter)
+                for handler in getattr(lg, "handlers", []) or []:
+                    handler.addFilter(cls._log_filter)
+            except Exception:
+                pass
+        # 同时给当前已存在的所有 logger 和 handler 加过滤器，兼容 AstrBot 自定义 logger 名称。
         try:
-            if hasattr(self.config, "get"):
-                value = self.config.get(key, None)
-                if value is not None:
-                    return value
-                group_name = self._config_group_for_key(key)
-                if group_name:
-                    group = self.config.get(group_name, {})
-                    if isinstance(group, dict) and key in group:
-                        return group.get(key, default)
+            for lg in logging.Logger.manager.loggerDict.values():
+                if isinstance(lg, logging.Logger):
+                    lg.addFilter(cls._log_filter)
+                    for handler in getattr(lg, "handlers", []) or []:
+                        handler.addFilter(cls._log_filter)
         except Exception:
             pass
-        if isinstance(self.config, dict):
-            if key in self.config:
+        cls._log_filter_installed = True
+
+    def _cfg_get(self, key, default=None):
+        """安全读取 AstrBotConfig/dict 配置，读取失败时返回默认值。"""
+        try:
+            if hasattr(self.config, "get"):
                 return self.config.get(key, default)
-            group_name = self._config_group_for_key(key)
-            group = self.config.get(group_name, {}) if group_name else {}
-            if isinstance(group, dict) and key in group:
-                return group.get(key, default)
-        return default
-
-    @classmethod
-    def _config_group_for_key(cls, key: str) -> str | None:
-        if key in cls._PRIVATE_CONFIG_KEYS:
-            return "private_chat_settings"
-        if key in cls._GROUP_CONFIG_KEYS:
-            return "group_chat_settings"
-        return None
-
-    @classmethod
-    def _dict_cfg_get(cls, data: dict, key: str, default=None):
-        if not isinstance(data, dict):
-            return default
-        if key in data:
-            return data.get(key, default)
-        group_name = cls._config_group_for_key(key)
-        group = data.get(group_name, {}) if group_name else {}
-        if isinstance(group, dict) and key in group:
-            return group.get(key, default)
+        except Exception:
+            pass
         return default
 
     def _get_bool_config(self, key, default=False):
@@ -138,7 +149,7 @@ class GroupUserWhitelistPlugin(Star):
             if not cfg_path.exists():
                 return set()
             data = json.loads(cfg_path.read_text(encoding="utf-8-sig") or "{}")
-            users = cls._dict_cfg_get(data, "private_chat_users", [])
+            users = data.get("private_chat_users", [])
             if isinstance(users, (str, int)):
                 users = [users]
             if not isinstance(users, list):
