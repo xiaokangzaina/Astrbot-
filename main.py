@@ -16,30 +16,24 @@ from astrbot.core.platform.message_type import MessageType
 
 logger = logging.getLogger(__name__)
 
+class _AstrBotAfterMessageSentLogFilter(logging.Filter):
+    """仅屏蔽 after_message_sent 终止传播的冗余日志，不影响发送消息日志。"""
 
-class _AstrBotStopPropagationLogFilter(logging.Filter):
-    """屏蔽 AstrBot 框架输出的指定冗余日志。"""
-
-    TARGET_TEXTS = (
-        "astrbot - after_message_sent 终止了事件传播。",
-        "Prepare to send -",
-    )
+    TARGET_TEXT = "astrbot - after_message_sent 终止了事件传播。"
 
     def filter(self, record: logging.LogRecord) -> bool:
-        """返回 False 时丢弃命中的冗余日志记录。"""
         try:
-            msg = record.getMessage()
+            return self.TARGET_TEXT not in record.getMessage()
         except Exception:
             return True
-        text = str(msg)
-        return not any(target in text for target in self.TARGET_TEXTS)
+
 
 
 @register(
     "astrbot_plugin_permission_controller",
     "local",
     "按 用户QQ-群号/群号列表 限制谁能调用模型/机器人",
-    "1.7.8",
+    "1.8.1",
 )
 class GroupUserWhitelistPlugin(Star):
     """AstrBot 权限控制器主类。
@@ -50,8 +44,8 @@ class GroupUserWhitelistPlugin(Star):
     3. allowed_groups 会同步到 AstrBot 平台白名单，避免核心层提前拦截群消息。
     """
 
-    _log_filter_installed = False
-    _log_filter = _AstrBotStopPropagationLogFilter()
+    _after_message_sent_log_filter_installed = False
+    _after_message_sent_log_filter = _AstrBotAfterMessageSentLogFilter()
     _admin_wake_bypass_patch_installed = False
     _whitelist_stage_patch_installed = False
 
@@ -74,14 +68,24 @@ class GroupUserWhitelistPlugin(Star):
         )
         self.allowed_groups = self._normalize_ids(self._cfg_get("allowed_groups", []))
         self._sync_plugin_allowlist_to_platform_whitelist()
-        self._install_stop_propagation_log_filter()
+        self._install_after_message_sent_log_filter()
         self._install_admin_wake_bypass_patch()
         self._install_private_whitelist_stage_patch()
+        logger.info(
+            "[PermissionController] 已加载：群聊规则=%s，群整体放行=%s，用户群号规则=%s，私聊白名单=%s，群聊黑名单=%s，管理员绕过=%s",
+            self.enable_group_rules,
+            sorted(self.allowed_groups),
+            self.rules,
+            sorted(self.private_chat_users),
+            sorted(self.group_blacklist),
+            self.admin_bypass,
+        )
+
 
     @classmethod
-    def _install_stop_propagation_log_filter(cls):
-        """安装日志过滤器，屏蔽指定 AstrBot 冗余日志。"""
-        if cls._log_filter_installed:
+    def _install_after_message_sent_log_filter(cls):
+        """安装精确日志过滤器，只屏蔽 after_message_sent 终止传播日志。"""
+        if cls._after_message_sent_log_filter_installed:
             return
         target_loggers = [
             logging.getLogger(),
@@ -90,26 +94,15 @@ class GroupUserWhitelistPlugin(Star):
             logging.getLogger("core"),
             logging.getLogger("astrbot.core"),
             logging.getLogger("astrbot.core.pipeline.context_utils"),
-            logging.getLogger("astrbot.core.pipeline.result_decorate.stage"),
-            logging.getLogger("astrbot.core.pipeline.respond.stage"),
         ]
         for lg in target_loggers:
             try:
-                lg.addFilter(cls._log_filter)
+                lg.addFilter(cls._after_message_sent_log_filter)
                 for handler in getattr(lg, "handlers", []) or []:
-                    handler.addFilter(cls._log_filter)
+                    handler.addFilter(cls._after_message_sent_log_filter)
             except Exception:
                 pass
-        # 同时给当前已存在的所有 logger 和 handler 加过滤器，兼容 AstrBot 自定义 logger 名称。
-        try:
-            for lg in logging.Logger.manager.loggerDict.values():
-                if isinstance(lg, logging.Logger):
-                    lg.addFilter(cls._log_filter)
-                    for handler in getattr(lg, "handlers", []) or []:
-                        handler.addFilter(cls._log_filter)
-        except Exception:
-            pass
-        cls._log_filter_installed = True
+        cls._after_message_sent_log_filter_installed = True
 
     def _cfg_get(self, key, default=None):
         """安全读取 AstrBotConfig/dict 配置，读取失败时返回默认值。"""
@@ -572,18 +565,17 @@ class GroupUserWhitelistPlugin(Star):
             # 兜底：如果无法判断为私聊，不拦截，避免误伤群聊。
             return
 
-        if not self.private_chat_users:
-            return
-
         # 不同适配器暴露的私聊 ID 字段不同，因此收集多个候选值做交集匹配。
         candidates = self._private_sender_candidates(event)
         if not candidates:
+            event.stop_event()
             return
 
         if self.admin_bypass and any(self._is_admin(item) for item in candidates):
             return
 
-        if candidates & self.private_chat_users:
+        # 私聊白名单为空时，表示不放行任何普通私聊用户。
+        if self.private_chat_users and candidates & self.private_chat_users:
             return
 
         event.stop_event()
