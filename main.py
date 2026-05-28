@@ -13,7 +13,6 @@ from sys import maxsize
 from astrbot.api.event import AstrMessageEvent, filter
 from astrbot.api.star import Context, Star, register
 from astrbot.core.platform.message_type import MessageType
-from .web import PermissionControllerWebController
 
 logger = logging.getLogger(__name__)
 
@@ -75,8 +74,6 @@ class GroupUserWhitelistPlugin(Star):
         )
         self.allowed_groups = self._normalize_ids(self._cfg_get("allowed_groups", []))
         self._sync_plugin_allowlist_to_platform_whitelist()
-        self.web = PermissionControllerWebController(self.context, self.config)
-        self.web.register_routes()
         self._install_stop_propagation_log_filter()
         self._install_admin_wake_bypass_patch()
         self._install_private_whitelist_stage_patch()
