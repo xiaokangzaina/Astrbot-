@@ -22,13 +22,17 @@ except Exception:  # pragma: no cover - web 模块缺失时不影响核心功能
 logger = logging.getLogger(__name__)
 
 class _AstrBotAfterMessageSentLogFilter(logging.Filter):
-    """仅屏蔽 after_message_sent 终止传播的冗余日志，不影响发送消息日志。"""
+    """屏蔽 AstrBot 权限拦截后产生的冗余发送/终止传播日志。"""
 
-    TARGET_TEXT = "astrbot - after_message_sent 终止了事件传播。"
+    TARGET_TEXTS = (
+        "astrbot - after_message_sent 终止了事件传播。",
+        "Prepare to send -",
+    )
 
     def filter(self, record: logging.LogRecord) -> bool:
         try:
-            return self.TARGET_TEXT not in record.getMessage()
+            message = record.getMessage()
+            return not any(text in message for text in self.TARGET_TEXTS)
         except Exception:
             return True
 
@@ -38,7 +42,7 @@ class _AstrBotAfterMessageSentLogFilter(logging.Filter):
     "astrbot_plugin_permission_controller",
     "local",
     "按 用户QQ-群号/群号列表 限制谁能调用模型/机器人",
-    "1.8.3",
+    "1.9.1",
 )
 class GroupUserWhitelistPlugin(Star):
     """AstrBot 权限控制器主类。
@@ -131,6 +135,7 @@ class GroupUserWhitelistPlugin(Star):
             logging.getLogger("Core"),
             logging.getLogger("core"),
             logging.getLogger("astrbot.core"),
+            logging.getLogger("astrbot.core.pipeline.respond.stage"),
             logging.getLogger("astrbot.core.pipeline.context_utils"),
         ]
         for lg in target_loggers:
